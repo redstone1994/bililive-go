@@ -131,7 +131,7 @@ func (r *recorder) tryRecord(ctx context.Context) {
 	url := urls[0]
 
 	if strings.Contains(url.Path, "m3u8") {
-		fileName = fileName[:len(fileName)-4] + ".ts"
+		fileName = fileName[:len(fileName)-4] + ".flv"
 	}
 
 	if info.AudioOnly {
