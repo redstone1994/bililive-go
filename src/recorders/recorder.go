@@ -214,6 +214,8 @@ func (r *recorder) tryRecord(ctx context.Context) {
 		}
 		r.getLogger().Debugf("end executing custom_commandline: %s", args[1])
 	} else if r.config.OnRecordFinished.ConvertToMp4 {
+		//格式转换时去除原本后缀名
+		newFileName := fileName[0:strings.LastIndex(fileName, ".")]
 		convertCmd := exec.Command(
 			ffmpegPath,
 			"-hide_banner",
@@ -221,7 +223,7 @@ func (r *recorder) tryRecord(ctx context.Context) {
 			fileName,
 			"-c",
 			"copy",
-			fileName+".mp4",
+			newFileName+".mp4",
 		)
 		if err = convertCmd.Run(); err != nil {
 			convertCmd.Process.Kill()
@@ -253,7 +255,9 @@ func (r *recorder) setAndCloseParser(p parser.Parser) {
 	r.parserLock.Lock()
 	defer r.parserLock.Unlock()
 	if r.parser != nil {
-		r.parser.Stop()
+		if err := r.parser.Stop(); err != nil {
+			r.getLogger().WithError(err).Warn("failed to end recorder")
+		}
 	}
 	r.parser = p
 }
@@ -279,7 +283,9 @@ func (r *recorder) Close() {
 	}
 	close(r.stop)
 	if p := r.getParser(); p != nil {
-		p.Stop()
+		if err := p.Stop(); err != nil {
+			r.getLogger().WithError(err).Warn("failed to end recorder")
+		}
 	}
 	r.getLogger().Info("Record End")
 	r.ed.DispatchEvent(events.NewEvent(RecorderStop, r.Live))
